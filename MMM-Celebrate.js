@@ -24,6 +24,11 @@ Module.register("MMM-Celebrate", {
     // Video settings (mode 3)
     videoFile: "confetti.webm",
     videoPauseBetweenLoops: 2000,
+    // PNG sequence settings (mode 4)
+    sequenceFolder: "celebration-png",
+    sequenceFrameCount: 126,
+    sequenceFps: 24,
+    sequencePauseBetweenLoops: 2000,
     // Check interval for celebrations (default: every minute)
     checkInterval: 60000,
     // Z-index for full screen overlay
@@ -42,6 +47,9 @@ Module.register("MMM-Celebrate", {
     this.confettiInstance = null;
     this.lottiePlayer = null;
     this.videoPlayer = null;
+    this.sequenceInterval = null;
+    this.sequenceFrame = 0;
+    this.sequenceImages = [];
     this.celebrationTimeout = null;
     this.loaded = false;
 
@@ -129,6 +137,8 @@ Module.register("MMM-Celebrate", {
       this.fireConfettiMode2();
     } else if (this.config.confettiMode === 3) {
       this.fireConfettiMode3();
+    } else if (this.config.confettiMode === 4) {
+      this.fireConfettiMode4();
     }
   },
 
@@ -250,6 +260,58 @@ Module.register("MMM-Celebrate", {
     video.play();
   },
 
+  // Mode 4: PNG sequence playback
+  fireConfettiMode4: function () {
+    const container = document.getElementById("celebrate-sequence-container");
+    if (!container) return;
+
+    const self = this;
+    const frameInterval = 1000 / this.config.sequenceFps;
+    
+    // Create image element
+    const img = document.createElement("img");
+    img.className = "sequence-frame";
+    container.appendChild(img);
+    
+    this.sequenceFrame = 0;
+    
+    // Preload all images
+    this.sequenceImages = [];
+    for (let i = 0; i < this.config.sequenceFrameCount; i++) {
+      const preload = new Image();
+      preload.src = `modules/MMM-Celebrate/sequences/${this.config.sequenceFolder}/${i}.png`;
+      this.sequenceImages.push(preload);
+    }
+    
+    // Start playback
+    const playSequence = () => {
+      this.sequenceFrame = 0;
+      img.src = this.sequenceImages[0].src;
+      
+      this.sequenceInterval = setInterval(() => {
+        this.sequenceFrame++;
+        
+        if (this.sequenceFrame >= this.config.sequenceFrameCount) {
+          // End of sequence
+          clearInterval(this.sequenceInterval);
+          
+          if (!this.celebrating) return;
+          
+          // Pause then loop
+          setTimeout(() => {
+            if (this.celebrating) {
+              playSequence();
+            }
+          }, this.config.sequencePauseBetweenLoops);
+        } else {
+          img.src = this.sequenceImages[this.sequenceFrame].src;
+        }
+      }, frameInterval);
+    };
+    
+    playSequence();
+  },
+
   endCelebration: function () {
     this.celebrating = false;
     this.currentMessage = "";
@@ -270,6 +332,12 @@ Module.register("MMM-Celebrate", {
       this.videoPlayer.remove();
       this.videoPlayer = null;
     }
+
+    if (this.sequenceInterval) {
+      clearInterval(this.sequenceInterval);
+      this.sequenceInterval = null;
+    }
+    this.sequenceImages = [];
     
     this.updateDom(500);
   },
@@ -288,7 +356,7 @@ Module.register("MMM-Celebrate", {
     // Full screen overlay
     const overlay = document.createElement("div");
     overlay.className = "celebrate-overlay";
-    if (this.config.confettiMode === 2 || this.config.confettiMode === 3) {
+    if (this.config.confettiMode === 2 || this.config.confettiMode === 3 || this.config.confettiMode === 4) {
       overlay.classList.add("transparent");
     }
 
@@ -306,6 +374,11 @@ Module.register("MMM-Celebrate", {
     const videoContainer = document.createElement("div");
     videoContainer.id = "celebrate-video-container";
     videoContainer.className = "celebrate-video";
+
+    // Sequence container (for mode 4)
+    const sequenceContainer = document.createElement("div");
+    sequenceContainer.id = "celebrate-sequence-container";
+    sequenceContainer.className = "celebrate-sequence";
 
     // Text container with zoom animation (only for mode 1)
     if (this.config.confettiMode === 1) {
@@ -325,6 +398,7 @@ Module.register("MMM-Celebrate", {
     overlay.appendChild(canvas);
     overlay.appendChild(lottieContainer);
     overlay.appendChild(videoContainer);
+    overlay.appendChild(sequenceContainer);
     wrapper.appendChild(overlay);
 
     return wrapper;
