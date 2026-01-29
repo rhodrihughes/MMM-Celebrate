@@ -1,32 +1,16 @@
 {
   "name": "mmm-celebrate",
   "version": "1.0.0",
-  "description": "[Module description]",
+  "description": "A MagicMirror module that displays full-screen celebrations with confetti animations",
   "main": "MMM-Celebrate.js",
-  "scripts": {
-    "lint": "eslint",
-    "lint:fix": "eslint --fix",
-    "test": "node --run lint"
-  },
-  "repository": {
-    "type": "git",
-    "url": "git+https://github.com/rhodrihughes/MMM-Celebrate.git"
-  },
   "keywords": [
-    "template"
+    "MagicMirror",
+    "module",
+    "celebration",
+    "confetti",
+    "birthday",
+    "anniversary"
   ],
-  "author": "Rhodri Hughes",
-  "license": "MIT",
-  "bugs": {
-    "url": "https://github.com/rhodrihughes/MMM-Celebrate/issues"
-  },
-  "homepage": "https://github.com/rhodrihughes/MMM-Celebrate#readme",
-  "devDependencies": {
-    "@eslint/css": "^0.9.0",
-    "@eslint/js": "^9.30.1",
-    "@eslint/markdown": "^6.6.0",
-    "@stylistic/eslint-plugin": "^5.1.0",
-    "eslint": "^9.30.1",
-    "globals": "^16.3.0"
-  }
+  "author": "",
+  "license": "MIT"
 }
