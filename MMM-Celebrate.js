@@ -15,12 +15,15 @@ Module.register("MMM-Celebrate", {
     confettiDecay: 0.95,
     confettiGravity: 1,
     confettiColors: ["#ff0000", "#00ff00", "#0000ff", "#ffff00", "#ff00ff", "#00ffff", "#ffa500", "#ff69b4"],
-    // Confetti mode: 1 = center burst then random, 2 = lottie animation
+    // Confetti mode: 1 = center burst then random, 2 = lottie animation, 3 = video
     confettiMode: 1,
     // Lottie settings (mode 2)
     lottieFile: "confetti on transparent background.lottie",
     lottiePauseBetweenLoops: 2000,
     lottieRotation: 0,
+    // Video settings (mode 3)
+    videoFile: "confetti.webm",
+    videoPauseBetweenLoops: 2000,
     // Check interval for celebrations (default: every minute)
     checkInterval: 60000,
     // Z-index for full screen overlay
@@ -38,6 +41,7 @@ Module.register("MMM-Celebrate", {
     this.confettiCanvas = null;
     this.confettiInstance = null;
     this.lottiePlayer = null;
+    this.videoPlayer = null;
     this.celebrationTimeout = null;
     this.loaded = false;
 
@@ -123,6 +127,8 @@ Module.register("MMM-Celebrate", {
       this.fireConfettiMode1();
     } else if (this.config.confettiMode === 2) {
       this.fireConfettiMode2();
+    } else if (this.config.confettiMode === 3) {
+      this.fireConfettiMode3();
     }
   },
 
@@ -213,6 +219,37 @@ Module.register("MMM-Celebrate", {
     });
   },
 
+  // Mode 3: Video playback with pauses between loops
+  fireConfettiMode3: function () {
+    const container = document.getElementById("celebrate-video-container");
+    if (!container) return;
+
+    const self = this;
+    
+    const video = document.createElement("video");
+    video.src = `modules/MMM-Celebrate/videos/${this.config.videoFile}`;
+    video.muted = true;
+    video.playsInline = true;
+    video.autoplay = true;
+    
+    container.appendChild(video);
+    this.videoPlayer = video;
+
+    // Handle loop with pause
+    video.addEventListener("ended", function () {
+      if (!self.celebrating) return;
+      
+      setTimeout(() => {
+        if (self.celebrating && self.videoPlayer) {
+          self.videoPlayer.currentTime = 0;
+          self.videoPlayer.play();
+        }
+      }, self.config.videoPauseBetweenLoops);
+    });
+
+    video.play();
+  },
+
   endCelebration: function () {
     this.celebrating = false;
     this.currentMessage = "";
@@ -226,6 +263,12 @@ Module.register("MMM-Celebrate", {
       this.lottiePlayer.stop();
       this.lottiePlayer.remove();
       this.lottiePlayer = null;
+    }
+
+    if (this.videoPlayer) {
+      this.videoPlayer.pause();
+      this.videoPlayer.remove();
+      this.videoPlayer = null;
     }
     
     this.updateDom(500);
@@ -245,8 +288,8 @@ Module.register("MMM-Celebrate", {
     // Full screen overlay
     const overlay = document.createElement("div");
     overlay.className = "celebrate-overlay";
-    if (this.config.confettiMode === 2) {
-      overlay.style.background = "transparent";
+    if (this.config.confettiMode === 2 || this.config.confettiMode === 3) {
+      overlay.classList.add("transparent");
     }
 
     // Confetti canvas
@@ -258,6 +301,11 @@ Module.register("MMM-Celebrate", {
     const lottieContainer = document.createElement("div");
     lottieContainer.id = "celebrate-lottie-container";
     lottieContainer.className = "celebrate-lottie";
+
+    // Video container (for mode 3)
+    const videoContainer = document.createElement("div");
+    videoContainer.id = "celebrate-video-container";
+    videoContainer.className = "celebrate-video";
 
     // Text container with zoom animation (only for mode 1)
     if (this.config.confettiMode === 1) {
@@ -276,6 +324,7 @@ Module.register("MMM-Celebrate", {
     }
     overlay.appendChild(canvas);
     overlay.appendChild(lottieContainer);
+    overlay.appendChild(videoContainer);
     wrapper.appendChild(overlay);
 
     return wrapper;
