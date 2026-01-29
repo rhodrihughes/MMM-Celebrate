@@ -18,8 +18,9 @@ Module.register("MMM-Celebrate", {
     // Confetti mode: 1 = center burst then random, 2 = lottie animation
     confettiMode: 1,
     // Lottie settings (mode 2)
-    lottieFile: "confetti.lottie",
+    lottieFile: "confetti on transparent background.lottie",
     lottiePauseBetweenLoops: 2000,
+    lottieRotation: 0,
     // Check interval for celebrations (default: every minute)
     checkInterval: 60000,
     // Z-index for full screen overlay
@@ -190,11 +191,14 @@ Module.register("MMM-Celebrate", {
     player.setAttribute("background", "transparent");
     player.setAttribute("speed", "1");
     player.setAttribute("autoplay", "true");
-    player.style.width = "100%";
-    player.style.height = "100%";
     
     container.appendChild(player);
     this.lottiePlayer = player;
+
+    // Apply rotation if configured
+    if (this.config.lottieRotation) {
+      player.style.transform = `rotate(${this.config.lottieRotation}deg)`;
+    }
 
     // Handle loop with pause
     player.addEventListener("complete", function () {

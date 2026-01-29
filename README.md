@@ -1,12 +1,12 @@
 # MMM-Celebrate
 
-A MagicMirror² module that displays full-screen celebrations with realistic confetti animations. Perfect for birthdays, anniversaries, holidays, and special occasions.
+A MagicMirror² module that displays full-screen celebrations with confetti animations. Perfect for birthdays, anniversaries, holidays, and special occasions.
 
 ## Features
 
 - Full-screen celebration overlay
-- Zooming text animation
-- Realistic confetti effect using [canvas-confetti](https://github.com/catdad/canvas-confetti)
+- Two confetti modes: canvas-based or Lottie animation
+- Zooming text animation (mode 1)
 - Date-based automatic celebrations
 - External trigger support via notifications
 - Customizable colors, duration, and effects
@@ -23,28 +23,45 @@ A MagicMirror² module that displays full-screen celebrations with realistic con
    git clone https://github.com/your-repo/MMM-Celebrate.git
    ```
 
-3. No additional dependencies required - confetti library is loaded from CDN.
+3. No additional dependencies required.
+
+## Confetti Modes
+
+### Mode 1: Canvas Confetti
+Uses [canvas-confetti](https://github.com/catdad/canvas-confetti) for particle-based confetti. Features a center burst followed by random bursts across the screen. Includes zooming text animation.
+
+### Mode 2: Lottie Animation
+Uses a `.lottie` file for pre-rendered confetti animation. Lighter on resources, good for older hardware. No text overlay - just the animation on a transparent background.
 
 ## Configuration
 
 Add the module to your `config/config.js`:
 
 ```javascript
+// Mode 1: Canvas confetti with text
 {
   module: "MMM-Celebrate",
-  position: "fullscreen_above", // Position doesn't matter - always fullscreen
+  position: "fullscreen_above",
   config: {
+    confettiMode: 1,
     celebrations: [
       { date: "01-01", message: "🎉 Happy New Year! 🎉" },
       { date: "12-25", message: "🎄 Merry Christmas! 🎄" },
-      { date: "07-04", message: "🇺🇸 Happy 4th of July! 🇺🇸" },
-      // Add your own dates in MM-DD format
     ],
-    duration: 10000,           // Celebration duration in ms
-    textColor: "#ffffff",      // Text color
-    textSize: "4em",           // Text size
-    realisticBurst: true,      // Fire confetti from multiple angles
-    testMode: false,           // Set to true to test immediately
+    testMode: true,
+  }
+}
+
+// Mode 2: Lottie animation
+{
+  module: "MMM-Celebrate",
+  position: "fullscreen_above",
+  config: {
+    confettiMode: 2,
+    lottieFile: "confetti on transparent background.lottie",
+    lottieRotation: 90,
+    lottiePauseBetweenLoops: 2000,
+    testMode: true,
   }
 }
 ```
@@ -53,8 +70,16 @@ Add the module to your `config/config.js`:
 
 | Option | Default | Description |
 |--------|---------|-------------|
-| `celebrations` | `[]` | Array of celebration objects with `date` (MM-DD) and `message` |
+| `confettiMode` | `1` | `1` = canvas confetti with text, `2` = lottie animation |
+| `celebrations` | `[]` | Array of objects with `date` (MM-DD) and `message` |
 | `duration` | `10000` | Duration of celebration in milliseconds |
+| `testMode` | `false` | Trigger a test celebration on boot |
+| `testDelay` | `5000` | Delay before test celebration triggers (ms) |
+
+### Mode 1 Options (Canvas Confetti)
+
+| Option | Default | Description |
+|--------|---------|-------------|
 | `textZoomDuration` | `1500` | Duration of text zoom animation in ms |
 | `textColor` | `"#ffffff"` | Color of the celebration text |
 | `textSize` | `"4em"` | Size of the celebration text |
@@ -63,15 +88,23 @@ Add the module to your `config/config.js`:
 | `confettiStartVelocity` | `30` | Initial velocity of confetti |
 | `confettiDecay` | `0.95` | How quickly confetti slows down |
 | `confettiGravity` | `1` | Gravity effect on confetti |
-| `confettiColors` | `[array of colors]` | Array of hex color strings |
-| `realisticBurst` | `true` | Fire from multiple angles for realistic effect |
-| `checkInterval` | `60000` | How often to check for celebrations (ms) |
-| `zIndex` | `9999` | Z-index of the overlay |
-| `testMode` | `false` | Trigger a test celebration on load |
+| `confettiColors` | `[array]` | Array of hex color strings |
+
+### Mode 2 Options (Lottie)
+
+| Option | Default | Description |
+|--------|---------|-------------|
+| `lottieFile` | `"confetti on transparent background.lottie"` | Filename in the `lottie/` folder |
+| `lottieRotation` | `90` | Rotation in degrees (0, 90, 180, 270) |
+| `lottiePauseBetweenLoops` | `2000` | Pause between animation loops (ms) |
+
+## Adding Lottie Files
+
+Place your `.lottie` files in the `modules/MMM-Celebrate/lottie/` folder.
 
 ## External Triggering
 
-You can trigger celebrations from other modules using notifications:
+Trigger celebrations from other modules using notifications:
 
 ```javascript
 // Trigger a celebration
@@ -81,17 +114,10 @@ this.sendNotification("CELEBRATE_TRIGGER", { message: "🎂 Happy Birthday! 🎂
 this.sendNotification("CELEBRATE_STOP");
 ```
 
-## Screenshots
-
-When triggered, the module displays:
-1. A dark overlay covering the entire screen
-2. Text that zooms in from the center
-3. Realistic confetti bursting from multiple directions
-
 ## Credits
 
-- Confetti animation powered by [canvas-confetti](https://github.com/catdad/canvas-confetti)
-- Realistic look inspired by [kirilv.com/canvas-confetti](https://www.kirilv.com/canvas-confetti/)
+- Canvas confetti powered by [canvas-confetti](https://github.com/catdad/canvas-confetti)
+- Lottie playback via [@dotlottie/player-component](https://github.com/dotlottie/player-component)
 
 ## License
 
