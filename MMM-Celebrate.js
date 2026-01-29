@@ -15,8 +15,11 @@ Module.register("MMM-Celebrate", {
     confettiDecay: 0.95,
     confettiGravity: 1,
     confettiColors: ["#ff0000", "#00ff00", "#0000ff", "#ffff00", "#ff00ff", "#00ffff", "#ffa500", "#ff69b4"],
-    // Fire confetti from both sides for realistic effect
-    realisticBurst: true,
+    // Confetti mode: 1 = center burst then random, 2 = lottie animation
+    confettiMode: 1,
+    // Lottie settings (mode 2)
+    lottieFile: "confetti.lottie",
+    lottiePauseBetweenLoops: 2000,
     // Check interval for celebrations (default: every minute)
     checkInterval: 60000,
     // Z-index for full screen overlay
@@ -33,6 +36,7 @@ Module.register("MMM-Celebrate", {
     this.currentMessage = "";
     this.confettiCanvas = null;
     this.confettiInstance = null;
+    this.lottiePlayer = null;
     this.celebrationTimeout = null;
     this.loaded = false;
 
@@ -51,7 +55,23 @@ Module.register("MMM-Celebrate", {
   },
 
   getScripts: function () {
-    return ["https://cdn.jsdelivr.net/npm/canvas-confetti@1.9.3/dist/confetti.browser.min.js"];
+    return [
+      "https://cdn.jsdelivr.net/npm/canvas-confetti@1.9.3/dist/confetti.browser.min.js",
+    ];
+  },
+
+  loadDotLottie: function () {
+    return new Promise((resolve) => {
+      if (customElements.get("dotlottie-player")) {
+        resolve();
+        return;
+      }
+      const script = document.createElement("script");
+      script.type = "module";
+      script.src = "https://cdn.jsdelivr.net/npm/@dotlottie/player-component@2.7.12/dist/dotlottie-player.mjs";
+      script.onload = () => resolve();
+      document.head.appendChild(script);
+    });
   },
 
   checkForCelebrations: function () {
@@ -90,23 +110,23 @@ Module.register("MMM-Celebrate", {
   },
 
   startConfetti: function () {
-    const canvas = document.getElementById("celebrate-confetti-canvas");
-    if (!canvas || typeof confetti === "undefined") return;
+    // Fire confetti based on mode
+    if (this.config.confettiMode === 1) {
+      const canvas = document.getElementById("celebrate-confetti-canvas");
+      if (!canvas || typeof confetti === "undefined") return;
 
-    this.confettiInstance = confetti.create(canvas, {
-      resize: true,
-      useWorker: true,
-    });
-
-    // Realistic burst effect - fire from multiple angles
-    if (this.config.realisticBurst) {
-      this.fireRealisticConfetti();
-    } else {
-      this.fireSimpleConfetti();
+      this.confettiInstance = confetti.create(canvas, {
+        resize: true,
+        useWorker: true,
+      });
+      this.fireConfettiMode1();
+    } else if (this.config.confettiMode === 2) {
+      this.fireConfettiMode2();
     }
   },
 
-  fireRealisticConfetti: function () {
+  // Mode 1: Center burst, then random bursts across screen
+  fireConfettiMode1: function () {
     const duration = this.config.duration - 1000;
     const defaults = {
       startVelocity: this.config.confettiStartVelocity,
@@ -154,16 +174,39 @@ Module.register("MMM-Celebrate", {
     }, 1500);
   },
 
-  fireSimpleConfetti: function () {
-    const defaults = {
-      particleCount: this.config.confettiParticleCount,
-      spread: this.config.confettiSpread,
-      startVelocity: this.config.confettiStartVelocity,
-      colors: this.config.confettiColors,
-      origin: { x: 0.5, y: 0.5 },
-    };
+  // Mode 2: Lottie animation full screen with pauses between loops
+  fireConfettiMode2: async function () {
+    const container = document.getElementById("celebrate-lottie-container");
+    if (!container) return;
 
-    this.confettiInstance(defaults);
+    // Load dotlottie player if not already loaded
+    await this.loadDotLottie();
+
+    const self = this;
+    
+    // Create dotlottie-player element
+    const player = document.createElement("dotlottie-player");
+    player.setAttribute("src", `modules/MMM-Celebrate/lottie/${this.config.lottieFile}`);
+    player.setAttribute("background", "transparent");
+    player.setAttribute("speed", "1");
+    player.setAttribute("autoplay", "true");
+    player.style.width = "100%";
+    player.style.height = "100%";
+    
+    container.appendChild(player);
+    this.lottiePlayer = player;
+
+    // Handle loop with pause
+    player.addEventListener("complete", function () {
+      if (!self.celebrating) return;
+      
+      setTimeout(() => {
+        if (self.celebrating && self.lottiePlayer) {
+          self.lottiePlayer.seek(0);
+          self.lottiePlayer.play();
+        }
+      }, self.config.lottiePauseBetweenLoops);
+    });
   },
 
   endCelebration: function () {
@@ -173,6 +216,12 @@ Module.register("MMM-Celebrate", {
     if (this.confettiInstance) {
       this.confettiInstance.reset();
       this.confettiInstance = null;
+    }
+
+    if (this.lottiePlayer) {
+      this.lottiePlayer.stop();
+      this.lottiePlayer.remove();
+      this.lottiePlayer = null;
     }
     
     this.updateDom(500);
@@ -192,26 +241,37 @@ Module.register("MMM-Celebrate", {
     // Full screen overlay
     const overlay = document.createElement("div");
     overlay.className = "celebrate-overlay";
+    if (this.config.confettiMode === 2) {
+      overlay.style.background = "transparent";
+    }
 
     // Confetti canvas
     const canvas = document.createElement("canvas");
     canvas.id = "celebrate-confetti-canvas";
     canvas.className = "celebrate-canvas";
 
-    // Text container with zoom animation
-    const textContainer = document.createElement("div");
-    textContainer.className = "celebrate-text-container";
+    // Lottie container (for mode 2)
+    const lottieContainer = document.createElement("div");
+    lottieContainer.id = "celebrate-lottie-container";
+    lottieContainer.className = "celebrate-lottie";
 
-    const text = document.createElement("div");
-    text.className = "celebrate-text zoom-in";
-    text.innerHTML = this.currentMessage;
-    text.style.color = this.config.textColor;
-    text.style.fontSize = this.config.textSize;
-    text.style.animationDuration = this.config.textZoomDuration + "ms";
+    // Text container with zoom animation (only for mode 1)
+    if (this.config.confettiMode === 1) {
+      const textContainer = document.createElement("div");
+      textContainer.className = "celebrate-text-container";
 
-    textContainer.appendChild(text);
+      const text = document.createElement("div");
+      text.className = "celebrate-text zoom-in";
+      text.innerHTML = this.currentMessage;
+      text.style.color = this.config.textColor;
+      text.style.fontSize = this.config.textSize;
+      text.style.animationDuration = this.config.textZoomDuration + "ms";
+
+      textContainer.appendChild(text);
+      overlay.appendChild(textContainer);
+    }
     overlay.appendChild(canvas);
-    overlay.appendChild(textContainer);
+    overlay.appendChild(lottieContainer);
     wrapper.appendChild(overlay);
 
     return wrapper;
